@@ -38,8 +38,8 @@ verify_root() {
 }
 
 configure_firewall() {
-    grep -q -E '8080.+ALLOW.+Anywhere' <(ufw status) && echo "8080 allowed" || (\
-        ufw allow 8080/tcp && echo "8080 set to allowed"
+    grep -q -E '8080/tcp.+ALLOW.+10.1.118.0/24' <(ufw status) && echo "8080 allowed" || (\
+        ufw allow from 10.1.118.0/24 to any port 8080 proto tcp && echo "8080 set to allowed from 10.1.118.0/24"
     )
 }
 
