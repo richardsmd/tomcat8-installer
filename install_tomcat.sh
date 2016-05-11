@@ -2,7 +2,8 @@
 #
 # Setup Tomcat
 #
-# Author Mike Richards <richardsmd@pbworld.com>
+# Authors:  Mike Richards <richardsmd@pbworld.com>
+#           Ryan Avery <avery@pbworld.com>
 #
 # NOTE: script is *basically* idempotent. In other words, you can run it repeatedly without breaking things
 # subsequent runs will litter /opt with tomcat-YYYYMMDD_HHMMSS directories containing old data
@@ -12,11 +13,12 @@ set -u  # Referencing undefiend variables e.g., $FLOO will lead to an error
 set -o pipefail  # Prevent pipeline errors from being masked
 IFS=$'\n\t'
 
-TOMCAT_ARCHIVE='apache-tomcat-8.0.33.tar.gz'
-PSQL_DRIVER='postgresql-9.4.1208.jre7.jar'
+TC_VERSION='8.0.33'
+PSQL_VERSION='9.4.1208.jre7'
+TC_ARCHIVE="http://mirror.nexcess.net/apache/tomcat/tomcat-${TC_VERSION%%.*}/v${TC_VERSION}/bin/apache-tomcat-${TC_VERSION}.tar.gz"
+PSQL_DRIVER="https://jdbc.postgresql.org/download/postgresql-${PSQL_VERSION}.jar"
 
 TC_HOME='/opt/tomcat'
-TC_CONF="${TC_HOME}/conf"
 TC_LIB="${TC_HOME}/lib"
 
 main() {
@@ -24,8 +26,8 @@ main() {
     configure_firewall
     create_tomcat_user
     create_tomcat_dest
-    extract_tomcat
-    extract_postgresql_driver
+    download_and_extract_tomcat
+    download_and_extract_postgresql_driver
     set_ownership_and_permissions
     create_upstart_script
 }
@@ -59,16 +61,19 @@ create_tomcat_dest() {
     mkdir -p "$TC_HOME"
 }
 
-extract_tomcat() {
+download_and_extract_tomcat() {
+    wget -N $TC_ARCHIVE
     # extracts archive to specified directory, removing top-level dir included in archive
-    tar -xf "$TOMCAT_ARCHIVE" -C "$TC_HOME" --strip-components=1
+    tar -xf "${TC_ARCHIVE##*/}" -C "$TC_HOME" --strip-components=1
 }
 
-extract_postgresql_driver() {
-  if [ ! -d "$TC_LIB" ]; then
-    mkdir -p "$TC_LIB"
-  fi
-  cp "$PSQL_DRIVER" "$TC_LIB/$PSQL_DRIVER"
+download_and_extract_postgresql_driver() {
+    # only needed for liferay install
+    if [ ! -d "$TC_LIB" ]; then
+        mkdir -p "$TC_LIB"
+    fi
+    wget -N $PQSL_DRIVER
+    cp "${PSQL_DRIVER##*/}" "$TC_LIB"
 }
 
 set_ownership_and_permissions() {
