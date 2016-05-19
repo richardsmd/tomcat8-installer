@@ -32,6 +32,7 @@ main() {
     download_and_extract_postgresql_driver
     set_ownership_and_permissions
     set_8080_secure
+    remove_root_apps
     create_upstart_script
 }
 
@@ -94,6 +95,12 @@ set_ownership_and_permissions() {
 set_8080_secure() {
     # append to 8080 connector
     sed -i '/Connector.*port="8080".*1.1"\s*$/s/$/ proxyPort="443" scheme="https" secure="true"/' $TC_HOME/conf/server.xml
+    echo "Set 8080 connector as secure"
+}
+
+remove_root_apps() {
+    rm -r $TC_HOME/webapps/{docs,examples,host-manager,manager}
+    echo "Removed docs, examples, host-manager, and manager apps"
 }
 
 create_upstart_script() {
