@@ -91,7 +91,7 @@ set_ownership_and_permissions() {
     chown -R tomcat:www-data "$TC_HOME"
 }
 
-set_8080_secure {
+set_8080_secure() {
     # append to 8080 connector
     sed -i '/Connector.*port="8080".*1.1"\s*$/s/$/ proxyPort="443" scheme="https" secure="true"/' $TC_HOME/conf/server.xml
 }
