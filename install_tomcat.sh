@@ -17,18 +17,21 @@ TC_VERSION='8.0.33'
 PSQL_VERSION='9.4.1208.jre7'
 TC_ARCHIVE="http://mirror.nexcess.net/apache/tomcat/tomcat-${TC_VERSION%%.*}/v${TC_VERSION}/bin/apache-tomcat-${TC_VERSION}.tar.gz"
 PSQL_DRIVER="https://jdbc.postgresql.org/download/postgresql-${PSQL_VERSION}.jar"
+FW_SUBNET='10.1.118.0/24'
 
 TC_HOME='/opt/tomcat'
 TC_LIB="${TC_HOME}/lib"
 
 main() {
     verify_root
+    check_dependent_packages
     configure_firewall
     create_tomcat_user
     create_tomcat_dest
     download_and_extract_tomcat
     download_and_extract_postgresql_driver
     set_ownership_and_permissions
+    set_8080_secure
     create_upstart_script
 }
 
@@ -39,9 +42,17 @@ verify_root() {
     fi
 }
 
+check_dependent_packages() {
+  # See also
+  # http://www.webupd8.org/2012/01/install-oracle-java-jdk-7-in-ubuntu-via.html
+  sudo add-apt-repository ppa:webupd8team/java
+  sudo apt-get update
+  sudo apt-get install -y oracle-java7-installer
+}
+
 configure_firewall() {
-    grep -q -E '8080/tcp.+ALLOW.+10.1.118.0/24' <(ufw status) && echo "8080 allowed" || (\
-        ufw allow from 10.1.118.0/24 to any port 8080 proto tcp && echo "8080 set to allowed from 10.1.118.0/24"
+    grep -q -E "8080/tcp.+ALLOW.+$FW_SUBNET" <(ufw status) && echo "8080 allowed" || (\
+        ufw allow from $FW_SUBNET to any port 8080 proto tcp && echo "8080 set to allowed from $FW_SUBNET"
     )
 }
 
@@ -62,7 +73,7 @@ create_tomcat_dest() {
 }
 
 download_and_extract_tomcat() {
-    wget -N $TC_ARCHIVE
+    #wget -N $TC_ARCHIVE
     # extracts archive to specified directory, removing top-level dir included in archive
     tar -xf "${TC_ARCHIVE##*/}" -C "$TC_HOME" --strip-components=1
 }
@@ -72,12 +83,17 @@ download_and_extract_postgresql_driver() {
     if [ ! -d "$TC_LIB" ]; then
         mkdir -p "$TC_LIB"
     fi
-    wget -N $PQSL_DRIVER
+    #wget -N $PQSL_DRIVER
     cp "${PSQL_DRIVER##*/}" "$TC_LIB"
 }
 
 set_ownership_and_permissions() {
     chown -R tomcat:www-data "$TC_HOME"
+}
+
+set_8080_secure {
+    # append to 8080 connector
+    sed -i '/Connector.*port="8080".*1.1"\s*$/s/$/ proxyPort="443" scheme="https" secure="true"/' $TC_HOME/conf/server.xml
 }
 
 create_upstart_script() {
